@@ -15,7 +15,6 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const dayjs_1 = __importDefault(require("dayjs"));
 const weekOfYear_1 = __importDefault(require("dayjs/plugin/weekOfYear"));
 const axios_1 = __importDefault(require("axios"));
-const promises_1 = require("fs/promises");
 const lodash_1 = require("lodash");
 const notify_1 = require("./notify");
 dayjs_1.default.extend(weekOfYear_1.default);
@@ -147,9 +146,9 @@ const parseReserves = (res, resourceIds) => {
 };
 (() => __awaiter(void 0, void 0, void 0, function* () {
     const resourceIds = yield getResourceIds();
-    // const res = await getReserves();
+    const res = yield getReserves();
     // await writeFile(`${__dirname}/res.json`, JSON.stringify(res))
-    const res = JSON.parse((yield (0, promises_1.readFile)(`${__dirname}/res.json`)).toString());
+    // const res = JSON.parse((await readFile(`${__dirname}/res.json`)).toString());
     if (!res)
         return;
     const reservesByInstructor = parseReserves(res, resourceIds);
@@ -159,7 +158,6 @@ const parseReserves = (res, resourceIds) => {
         const freeReserveDateStr = Object.entries(freeReserves)
             .reduce((str, [dateStr, rs]) => {
             const dt = new Date(dateStr);
-            const hours = [];
             for (const r of rs) {
                 dt.setHours(r);
                 str.push(dt.toLocaleString());

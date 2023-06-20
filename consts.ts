@@ -151,9 +151,9 @@ const parseReserves = (res: [string, ReservaRaw[]][], resourceIds: IResources[])
 
 (async () => {
   const resourceIds = await getResourceIds()
-  // const res = await getReserves();
+  const res = await getReserves();
   // await writeFile(`${__dirname}/res.json`, JSON.stringify(res))
-  const res = JSON.parse((await readFile(`${__dirname}/res.json`)).toString());
+  // const res = JSON.parse((await readFile(`${__dirname}/res.json`)).toString());
   if (!res) return;
   const reservesByInstructor = parseReserves(res, resourceIds);
   const freeReserves = checkForFreeReserves(reservesByInstructor)
@@ -162,7 +162,6 @@ const parseReserves = (res: [string, ReservaRaw[]][], resourceIds: IResources[])
     const freeReserveDateStr = Object.entries(freeReserves)
     .reduce((str, [dateStr, rs]) => {
       const dt = new Date(dateStr);
-      const hours: string[] = []
       for (const r of rs) {
         dt.setHours(r);
         str.push(dt.toLocaleString());

@@ -84,7 +84,7 @@ const getReserves = () => __awaiter(void 0, void 0, void 0, function* () {
 const parseReverveItem = (item) => {
     return {
         start: parseDate(item.start),
-        end: parseDate(item.end),
+        end: parseDate(item.end).add(10, 'minutes'),
         resId: item.resourceId,
         desc: item.description,
     };
@@ -98,7 +98,7 @@ const checkForFreeReserves = (reservesByInstructor) => {
             const rsHours = rs.reduce((rH, r) => {
                 const st = r.start.hour();
                 const end = r.end.hour();
-                const duration = end - st;
+                const duration = Math.abs(r.end.diff(r.start, 'hours'));
                 if (duration === 1)
                     rH.push({ start: st, end });
                 else {
@@ -129,12 +129,9 @@ const checkForFreeReserves = (reservesByInstructor) => {
 const parseReserves = (res, resourceIds) => {
     const allReserves = {};
     for (const [date, resv] of res) {
-        const excludes = resv
-            .filter((r) => /^bg/i.test(r.id))
-            .map(parseReverveItem);
         const reserves = resv
             .filter((r) => (resourceIds.find(rid => rid.id === r.resourceId) || false)
-            && (!/^bg/i.test(r.id))
+            // && (!/^bg/i.test(r.id))
             && resourceIdsToInclude.includes(r.resourceId))
             .map(parseReverveItem)
             .filter((r) => {

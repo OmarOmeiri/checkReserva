@@ -1,5 +1,6 @@
 import dayjs from 'dayjs';
 import weekYear from 'dayjs/plugin/weekOfYear'
+import utc from 'dayjs/plugin/utc'
 import axios from 'axios';
 import { writeFile, readFile } from 'fs/promises'
 import { IResources, ReservaParsed, ReservaRaw } from './types';
@@ -7,6 +8,7 @@ import { groupBy } from 'lodash';
 import { notify } from './notify'
 
 dayjs.extend(weekYear);
+dayjs.extend(utc);
 
 const config = {
   url: (start: string, end: string) => `https://agenda.aeroclubedoparana.com.br/escala/get_reserves.php?start=${start}&end=${end}`,
@@ -154,7 +156,7 @@ const parseReserves = (res: [string, ReservaRaw[]][], resourceIds: IResources[])
   if (!res) return;
   const reservesByInstructor = parseReserves(res, resourceIds);
   const freeReserves = checkForFreeReserves(reservesByInstructor)
-  console.log('freeReserves: ', freeReserves);
+  console.log(`freeReserves: [${dayjs().format('YYYY-MM-DD hh:mm')}]`, freeReserves);
   if (Object.keys(freeReserves).length) {
     const freeReserveDateStr = Object.entries(freeReserves)
     .reduce((str, [dateStr, rs]) => {

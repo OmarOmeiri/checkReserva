@@ -14,10 +14,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 const dayjs_1 = __importDefault(require("dayjs"));
 const weekOfYear_1 = __importDefault(require("dayjs/plugin/weekOfYear"));
+const utc_1 = __importDefault(require("dayjs/plugin/utc"));
 const axios_1 = __importDefault(require("axios"));
 const lodash_1 = require("lodash");
 const notify_1 = require("./notify");
 dayjs_1.default.extend(weekOfYear_1.default);
+dayjs_1.default.extend(utc_1.default);
 const config = {
     url: (start, end) => `https://agenda.aeroclubedoparana.com.br/escala/get_reserves.php?start=${start}&end=${end}`,
     resourcesUrl: 'https://agenda.aeroclubedoparana.com.br/escala/get_resources.php',
@@ -150,7 +152,7 @@ const parseReserves = (res, resourceIds) => {
         return;
     const reservesByInstructor = parseReserves(res, resourceIds);
     const freeReserves = checkForFreeReserves(reservesByInstructor);
-    console.log('freeReserves: ', freeReserves);
+    console.log(`freeReserves: [${(0, dayjs_1.default)().format('YYYY-MM-DD hh:mm')}]`, freeReserves);
     if (Object.keys(freeReserves).length) {
         const freeReserveDateStr = Object.entries(freeReserves)
             .reduce((str, [dateStr, rs]) => {

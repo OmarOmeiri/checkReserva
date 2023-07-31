@@ -29,6 +29,7 @@ const config = {
         'CUNHA',
         'MONTEIRO',
         'DONADEL',
+        'BOSCOLO'
     ],
     reserveHours: [
         8,

@@ -16,10 +16,9 @@ const config = {
   instructors: [
     'PIRAGINE',
     'JOSÉ',
-    'CUNHA',
     'MONTEIRO',
-    'DONADEL',
-    'BOSCOLO'
+    'BOSCOLO',
+    'MIRÓ',
   ],
   reserveHours: [
     8,

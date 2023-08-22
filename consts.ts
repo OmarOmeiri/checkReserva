@@ -7,12 +7,17 @@ import { IResources, ReservaParsed, ReservaRaw } from './types';
 import { groupBy } from 'lodash';
 import { notify } from './notify'
 
+type FreeResv = {
+  [date: string]: number[]
+}
+
 dayjs.extend(weekYear);
 dayjs.extend(utc);
 
 const config = {
   url: (start: string, end: string) => `https://agenda.aeroclubedoparana.com.br/escala/get_reserves.php?start=${start}&end=${end}`,
   resourcesUrl: 'https://agenda.aeroclubedoparana.com.br/escala/get_resources.php',
+  cacheFile: `${__dirname}/cache.json`,
   instructors: [
     'PIRAGINE',
     'JOSÉ',
@@ -92,7 +97,7 @@ const parseReverveItem = (item: ReservaRaw): ReservaParsed => {
 }
 
 const checkForFreeReserves = (reservesByInstructor: {[date: string]: Record<string, ReservaParsed[]>}) => {
-  const freeReserves: {[date: string]: number[]} = {};
+  const freeReserves: FreeResv = {};
   Object.entries(reservesByInstructor)
   .forEach(([date, reserves]) => {
     Object.entries(reserves)
@@ -148,6 +153,48 @@ const parseReserves = (res: [string, ReservaRaw[]][], resourceIds: IResources[])
     return allReserves
 }
 
+const setCache = async (resv: FreeResv) => {
+  const now = Date.now();
+  await writeFile(config.cacheFile, JSON.stringify({
+    time: now,
+    resv
+  }))
+}
+
+const getCache = async (): Promise<FreeResv | null> => {
+
+  try {
+    const now = Date.now();
+    const cache =  JSON.parse((await readFile(config.cacheFile)).toString()) || {}
+    if ((now - cache.now) > 8.64e+7) return null
+    return cache.resv || {};
+  } catch {
+    return {}
+  }
+}
+
+const isEqualLastNotification = async (resv: FreeResv) => {
+  const last = await getCache();
+  if (last === null) return false;
+  const keys = Array.from(new Set([...Object.keys(resv), ...Object.keys(last)]))
+  for (const k of keys) {
+    if (
+      k in last
+      && k in resv
+      && last[k].every(item => resv[k].includes(item))
+      && resv[k].every(item => last[k].includes(item))
+    ) continue
+    return false
+  }
+  return true;
+}
+
+const shouldNotify = async (resv: FreeResv) => {
+  if (!Object.keys(resv).length) return false;
+  if ((await isEqualLastNotification(resv))) return false
+  return true
+}
+
 (async () => {
   const resourceIds = await getResourceIds()
   const res = await getReserves();
@@ -157,7 +204,8 @@ const parseReserves = (res: [string, ReservaRaw[]][], resourceIds: IResources[])
   const reservesByInstructor = parseReserves(res, resourceIds);
   const freeReserves = checkForFreeReserves(reservesByInstructor)
   console.log(`freeReserves: [${dayjs().format('YYYY-MM-DD hh:mm')}]`, freeReserves);
-  if (Object.keys(freeReserves).length) {
+
+  if ((await shouldNotify(freeReserves))) {
     const freeReserveDateStr = Object.entries(freeReserves)
     .reduce((str, [dateStr, rs]) => {
       const dt = new Date(dateStr);
@@ -169,5 +217,6 @@ const parseReserves = (res: [string, ReservaRaw[]][], resourceIds: IResources[])
     }, [] as string[])
 
     notify('Reservas disponíveis', freeReserveDateStr.join(', '))
+    await setCache(freeReserves);
   }
 })()

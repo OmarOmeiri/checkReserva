@@ -44,9 +44,9 @@ const checkArgs = (args) => {
         },
     }).values);
     const { sleep } = args;
-    console.log('sleep: ', sleep);
     while (true) {
         yield (0, consts_1.run)();
-        yield wait(30000);
+        logger_1.logger.info(`Will run again in ${sleep / 60000} minutes.`);
+        yield wait(sleep);
     }
 }))();

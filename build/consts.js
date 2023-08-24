@@ -12,6 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.run = void 0;
 const dayjs_1 = __importDefault(require("dayjs"));
 const weekOfYear_1 = __importDefault(require("dayjs/plugin/weekOfYear"));
 const utc_1 = __importDefault(require("dayjs/plugin/utc"));
@@ -19,6 +20,7 @@ const axios_1 = __importDefault(require("axios"));
 const promises_1 = require("fs/promises");
 const lodash_1 = require("lodash");
 const notify_1 = require("./notify");
+const logger_1 = require("./logger");
 dayjs_1.default.extend(weekOfYear_1.default);
 dayjs_1.default.extend(utc_1.default);
 const config = {
@@ -186,7 +188,7 @@ const shouldNotify = (resv) => __awaiter(void 0, void 0, void 0, function* () {
         return false;
     return true;
 });
-(() => __awaiter(void 0, void 0, void 0, function* () {
+const run = () => __awaiter(void 0, void 0, void 0, function* () {
     const resourceIds = yield getResourceIds();
     const res = yield getReserves();
     // await writeFile(`${__dirname}/res.json`, JSON.stringify(res))
@@ -195,8 +197,11 @@ const shouldNotify = (resv) => __awaiter(void 0, void 0, void 0, function* () {
         return;
     const reservesByInstructor = parseReserves(res, resourceIds);
     const freeReserves = checkForFreeReserves(reservesByInstructor);
-    console.log(`freeReserves: [${(0, dayjs_1.default)().format('YYYY-MM-DD hh:mm')}]`, freeReserves);
+    if (Object.keys(freeReserves).length) {
+        logger_1.logger.info(`Free reservations: ${JSON.stringify(freeReserves)}`);
+    }
     if ((yield shouldNotify(freeReserves))) {
+        logger_1.logger.info(logger_1.logger.style.blue.bgGreen('Sending push notification...'));
         const freeReserveDateStr = Object.entries(freeReserves)
             .reduce((str, [dateStr, rs]) => {
             const dt = new Date(dateStr);
@@ -209,4 +214,6 @@ const shouldNotify = (resv) => __awaiter(void 0, void 0, void 0, function* () {
         (0, notify_1.notify)('Reservas disponíveis', freeReserveDateStr.join(', '));
         yield setCache(freeReserves);
     }
-}))();
+    return freeReserves;
+});
+exports.run = run;

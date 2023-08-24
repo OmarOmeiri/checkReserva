@@ -55,10 +55,10 @@ const checkArgs = (args: Args): ArgsParsed => {
 
 
   const { sleep } = args;
-  console.log('sleep: ', sleep);
   while (true) {
     await run();
-    await wait(30000);
+    logger.info(`Will run again in ${sleep / 60000} minutes.`)
+    await wait(sleep);
   }
   
 })()

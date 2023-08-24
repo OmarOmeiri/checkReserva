@@ -6,6 +6,7 @@ import { writeFile, readFile } from 'fs/promises'
 import { IResources, ReservaParsed, ReservaRaw } from './types';
 import { groupBy } from 'lodash';
 import { notify } from './notify'
+import { logger } from './logger';
 
 type FreeResv = {
   [date: string]: number[]
@@ -195,7 +196,7 @@ const shouldNotify = async (resv: FreeResv) => {
   return true
 }
 
-(async () => {
+export const run = async () => {
   const resourceIds = await getResourceIds()
   const res = await getReserves();
   // await writeFile(`${__dirname}/res.json`, JSON.stringify(res))
@@ -203,9 +204,13 @@ const shouldNotify = async (resv: FreeResv) => {
   if (!res) return;
   const reservesByInstructor = parseReserves(res, resourceIds);
   const freeReserves = checkForFreeReserves(reservesByInstructor)
-  console.log(`freeReserves: [${dayjs().format('YYYY-MM-DD hh:mm')}]`, freeReserves);
+
+  if (Object.keys(freeReserves).length) {
+    logger.info(`Free reservations: ${JSON.stringify(freeReserves)}`)
+  }
 
   if ((await shouldNotify(freeReserves))) {
+    logger.info(logger.style.blue.bgGreen('Sending push notification...'));
     const freeReserveDateStr = Object.entries(freeReserves)
     .reduce((str, [dateStr, rs]) => {
       const dt = new Date(dateStr);
@@ -219,4 +224,5 @@ const shouldNotify = async (resv: FreeResv) => {
     notify('Reservas disponíveis', freeReserveDateStr.join(', '))
     await setCache(freeReserves);
   }
-})()
+  return freeReserves;
+}

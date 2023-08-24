@@ -16,6 +16,7 @@ const dayjs_1 = __importDefault(require("dayjs"));
 const weekOfYear_1 = __importDefault(require("dayjs/plugin/weekOfYear"));
 const utc_1 = __importDefault(require("dayjs/plugin/utc"));
 const axios_1 = __importDefault(require("axios"));
+const promises_1 = require("fs/promises");
 const lodash_1 = require("lodash");
 const notify_1 = require("./notify");
 dayjs_1.default.extend(weekOfYear_1.default);
@@ -23,6 +24,7 @@ dayjs_1.default.extend(utc_1.default);
 const config = {
     url: (start, end) => `https://agenda.aeroclubedoparana.com.br/escala/get_reserves.php?start=${start}&end=${end}`,
     resourcesUrl: 'https://agenda.aeroclubedoparana.com.br/escala/get_resources.php',
+    cacheFile: `${__dirname}/cache.json`,
     instructors: [
         'PIRAGINE',
         'JOSÉ',
@@ -143,6 +145,47 @@ const parseReserves = (res, resourceIds) => {
     }
     return allReserves;
 };
+const setCache = (resv) => __awaiter(void 0, void 0, void 0, function* () {
+    const now = Date.now();
+    yield (0, promises_1.writeFile)(config.cacheFile, JSON.stringify({
+        time: now,
+        resv
+    }));
+});
+const getCache = () => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const now = Date.now();
+        const cache = JSON.parse((yield (0, promises_1.readFile)(config.cacheFile)).toString()) || {};
+        if ((now - cache.now) > 8.64e+7)
+            return null;
+        return cache.resv || {};
+    }
+    catch (_a) {
+        return {};
+    }
+});
+const isEqualLastNotification = (resv) => __awaiter(void 0, void 0, void 0, function* () {
+    const last = yield getCache();
+    if (last === null)
+        return false;
+    const keys = Array.from(new Set([...Object.keys(resv), ...Object.keys(last)]));
+    for (const k of keys) {
+        if (k in last
+            && k in resv
+            && last[k].every(item => resv[k].includes(item))
+            && resv[k].every(item => last[k].includes(item)))
+            continue;
+        return false;
+    }
+    return true;
+});
+const shouldNotify = (resv) => __awaiter(void 0, void 0, void 0, function* () {
+    if (!Object.keys(resv).length)
+        return false;
+    if ((yield isEqualLastNotification(resv)))
+        return false;
+    return true;
+});
 (() => __awaiter(void 0, void 0, void 0, function* () {
     const resourceIds = yield getResourceIds();
     const res = yield getReserves();
@@ -153,7 +196,7 @@ const parseReserves = (res, resourceIds) => {
     const reservesByInstructor = parseReserves(res, resourceIds);
     const freeReserves = checkForFreeReserves(reservesByInstructor);
     console.log(`freeReserves: [${(0, dayjs_1.default)().format('YYYY-MM-DD hh:mm')}]`, freeReserves);
-    if (Object.keys(freeReserves).length) {
+    if ((yield shouldNotify(freeReserves))) {
         const freeReserveDateStr = Object.entries(freeReserves)
             .reduce((str, [dateStr, rs]) => {
             const dt = new Date(dateStr);
@@ -164,5 +207,6 @@ const parseReserves = (res, resourceIds) => {
             return str;
         }, []);
         (0, notify_1.notify)('Reservas disponíveis', freeReserveDateStr.join(', '));
+        yield setCache(freeReserves);
     }
 }))();
